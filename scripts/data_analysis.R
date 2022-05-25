@@ -30,6 +30,10 @@ library(tmap) # to work spatial data
 library(tidyverse) #  data import, tidying, manipulation, visualisation, and programming
 library(cowplot) # Data Visualization #add-on to ggplot like ggsave2
 library(readxl) # abrir tabela de dados no formato excel (xlm, xls,...)
+library(webr) # gerar graficos com os valores dos testes estatisticos
+library(ggpubr) # para criar plots de forma simples (for creating easily publication ready plots)
+library(rstatix) # provides pipe-friendly R functions for easy statistical analyses
+library(gridExtra) # plotar tabela de dados
 
 ############################ Data tables############################
 
@@ -38,24 +42,36 @@ dir()
 
 # carregando o arquivo de dados
 
-df.geral <- read_csv("data_tables/Banco_de_Dados_campo2021.csv", col_names = T)
+df_geral <- read_csv2("data_tables/Banco_de_Dados_campo2021_v2.csv", col_names = T)
 #df_geral <- read_excel("data_tables/Banco_de_Dados_campo2021.xlsx", 
                        #sheet = "data_ok")
 View(df_geral)
 
 str(df_geral)
-df_geral <- as.data.frame(df_geral)
+#df_geral <- as.data.frame(df_geral)
 
-df.geral$Vegetation <- as.factor(df.geral$Vegetation)
-df.geral$Area <- as.factor(df.geral$Area)
-df.geral$last_fire <- as.factor(df.geral$last_fire)
-df.geral$fire_count <- as.factor(df.geral$fire_count)
+df_geral$vegetation <- as.factor(df_geral$vegetation)
+df_geral$Area <- as.factor(df_geral$Area)
+df_geral$last_fire <- as.factor(df_geral$last_fire)
+df_geral$fire_count <- as.factor(df_geral$fire_count)
 
 
 ### Data Summarise
 
-df.summarise <- ddply(df.geral, .(Vegetation,Area, last_fire, fire_count), summarise, 
-                      Qnt_plot=length(unique(Parcela)),
+# df.summarise <- ddply(df.geral, .(Vegetation,Area, last_fire, fire_count), summarise, 
+#                       Qnt_plot=length(unique(Parcela)),
+#                       FvFm=mean(Fv_Fm),
+#                       RCABS=mean(RC_ABS),
+#                       FvFo=mean(Fv_Fo),
+#                       PI=mean(PI),
+#                       T_Max=mean(T_Max),
+#                       T_Min=mean(T_Min),
+#                       T_Mean=mean(T_Mean),
+#                       Diameter=mean(Diameter_cm),
+#                       Height=mean(Height_cm),
+#                       SPAD=mean(SPAD))
+
+df.summarise <- ddply(df_geral, .(vegetation, last_fire, Area), summarise, 
                       FvFm=mean(Fv_Fm),
                       RCABS=mean(RC_ABS),
                       FvFo=mean(Fv_Fo),
@@ -67,21 +83,73 @@ df.summarise <- ddply(df.geral, .(Vegetation,Area, last_fire, fire_count), summa
                       Height=mean(Height_cm),
                       SPAD=mean(SPAD))
 
-df.summarise <- ddply(df.geral, .(Vegetation, last_fire, Area), summarise, 
-                      Qnt_plot=length(unique(Parcela)),
-                      FvFm=mean(Fv_Fm),
-                      RCABS=mean(RC_ABS),
-                      FvFo=mean(Fv_Fo),
-                      PI=mean(PI),
-                      T_Max=mean(T_Max),
-                      T_Min=mean(T_Min),
-                      T_Mean=mean(T_Mean),
-                      Diameter=mean(Diameter_cm),
-                      Height=mean(Height_cm),
-                      SPAD=mean(SPAD))
+qnt_plots <- ddply(df_geral, .(vegetation, last_fire), summarise,
+                      Qnt_plot=length(unique(Parcela_2)))
+
+sum(qnt_plots$Qnt_plot)
+table_qnt_plots <- grid.table(qnt_plots)
+table_qnt_plots
+
+
+
+
+str(df.summarise)
+
+##### TESTE DOS PRESSUPOSTOS DA ANALISE DE VARIANCIA #######
+### Testando a homogeneidade das variancias atraves do teste de
+### Bartlett. 
+
+bartlett.test(FvFm ~ vegetation, data=df.summarise)
+t.h1 <- plot(FvFm ~ vegetation, data=df.summarise)
+
+bartlett.test(RCABS ~ vegetation, data=df.summarise)
+t.h2 <- plot(RCABS ~ vegetation, data=df.summarise)
+
+bartlett.test(FvFo ~ vegetation, data=df.summarise)
+t.h3 <- plot(FvFo ~ vegetation, data=df.summarise)
+
+bartlett.test(PI ~ vegetation, data=df.summarise)
+t.h4 <- plot(PI ~ vegetation, data=df.summarise)
+
+bartlett.test(T_Max ~ vegetation, data=df.summarise)
+t.h5 <- plot(T_Max ~ vegetation, data=df.summarise)
+
+bartlett.test(T_Min ~ vegetation, data=df.summarise)
+
+bartlett.test(T_Mean ~ vegetation, data=df.summarise)
+
+bartlett.test(Diameter ~ vegetation, data=df.summarise)
+
+bartlett.test(Height ~ vegetation, data=df.summarise)
+
+bartlett.test(SPAD ~ vegetation, data=df.summarise)
+plot(SPAD ~ vegetation, data=df.summarise)
+
+#Box plots with p-values
+bxp <- ggboxplot(df.summarise, x = "vegetation", y = "SPAD")
+bxp
+t_spad <- t_spad %>% add_xy_position(x = "supp")
+bxp + 
+  stat_pvalue_manual(t_spad, label = "p") +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.1)))
+
+
+#Verificao da normalidade dos dados
+glimpse(df.summarise)
+
+shapiro.test(PNCM_annual.park$Scars)
+shapiro.test(PNCM_annual.park$Total_BA)
+shapiro.test(PNCM_annual.park$percentBA)
+shapiro.test(PNCM_annual.park$MeanArea)
+shapiro.test(PNCM_annual.park$MaxArea)
+shapiro.test(PNCM_annual.park$SdBA)
+shapiro.test(PNCM_annual.park$IgnBA)
+
+
+
 # Rodar analise de variancia
 df.summarise
-modelo <- aov(Diameter~Vegetation+last_fire, data = df.summarise)
+modelo <- aov(Diameter~vegetation+last_fire, data = df.summarise)
 anova(modelo)
 
 # Rodar teste de comparacao de medias de Tukey
