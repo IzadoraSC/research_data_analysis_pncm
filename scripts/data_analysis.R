@@ -15,7 +15,7 @@ rm(list = ls()) # to remove objects from environment (a character
 ###Packages
 
 library(dplyr) # summarizing the result (data) of a single analysis
-library(readr)
+library(readr) # abrir tabela de dados no formata csv
 library(geobr) # carregar base de dados vetorias oficial do Brasil
 library(ggplot2) # Data Visualization # to plot graphics
 library(plyr) # trabalhando com dataframe
@@ -29,6 +29,7 @@ library(spatial) # to work spatial data
 library(tmap) # to work spatial data
 library(tidyverse) #  data import, tidying, manipulation, visualisation, and programming
 library(cowplot) # Data Visualization #add-on to ggplot like ggsave2
+library(readxl) # abrir tabela de dados no formato excel (xlm, xls,...)
 
 ############################ Data tables############################
 
@@ -36,11 +37,14 @@ getwd()
 dir()
 
 # carregando o arquivo de dados
-df.geral <- read_csv("./a_dados/Banco_de_Dados_campo2021_v2.csv", col_names = T)
 
-View(df.geral)
-str(df.geral)
-df.geral <- as.data.frame(df.geral)
+df.geral <- read_csv("data_tables/Banco_de_Dados_campo2021.csv", col_names = T)
+#df_geral <- read_excel("data_tables/Banco_de_Dados_campo2021.xlsx", 
+                       #sheet = "data_ok")
+View(df_geral)
+
+str(df_geral)
+df_geral <- as.data.frame(df_geral)
 
 df.geral$Vegetation <- as.factor(df.geral$Vegetation)
 df.geral$Area <- as.factor(df.geral$Area)
